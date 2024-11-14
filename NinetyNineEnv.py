@@ -6,56 +6,24 @@ class NinetyNineEnv(gym.Env):
     def __init__(self):
         super(NinetyNineEnv, self).__init__()
 
-        self.hand_size = 9
+        self.hand_size = 13
         self.num_players = 3
-        self.bidding_cards = 2
+        self.bidding_cards = 3
         self.num_suites = 4
 
+        self.bidding_phase = 1  #1 for bidding
+        
         #Game state variables
+        #self.points = np.zeros(self.num_players) FOR LATER
+
+        #Bidding states
         self.player_hands = None #Observable - your hand 
-        self.current_trick = np.zeros(self.num_players) #Observable - the currently shown cards
-        self.points = np.zeros(self.num_players) #Observable - the current points of all players
+        self.trump_suit = np.random.randint(4)
+
+        #Game play states - includes all the bidding states
+        self.current_trick = np.zeros(self.num_players) #maybe 52 - 1,0 for shown cards
         self.current_player = np.random.randint(self.num_players) #Observable - the current player's turn - maybe we can get this from the current_trick
-        self.bidding_phase = 1  #Observable
-        self.trump_suit = np.random.randint(4) #Observable
-        self.tricks_taken = np.zeros(self.num_players) #Observable
-        self.tricks_remaining = self.hand_size #You can get this from player_hands - kinda
-        self.current_bids = np.zeros(self.num_players) #Observable only for your 
-
-        self.contracts_met = np.zeros(self.num_players)
-
-        #action space
-        self.action_space = spaces.Discrete(self.hand_size)
-
-        #TODO: Update to actual observation space
-        self.observation_space = spaces.Dict(
-            {
-            'hand' : spaces.MultiDiscrete([self.num_suites, self.hand_size]),
-            'current_trick' : spaces.MultiDiscrete([self.num_suites, self.hand_size] * self.num_players),
-            'points' : spaces.MultiDiscrete([139] * self.num_players),# this seems like a place to reduce
-            'current_player' : spaces.Discrete(self.num_players),
-            'bidding_phase' : spaces.Discrete(2),
-            'trump_suit' : spaces.Discrete(self.num_suites),
-            'tricks_taken' : spaces.MultiDiscrete([self.hand_size] * self.num_players),
-            'currnet_bid': spaces.MultiDiscrete([self.hand_size - self.bidding_cards]),
-            }
-        )
-
-        #SIZE OF OBSERVATION SPACE:
-        # 4 * 9
-        # 4 * 9 * 3
-        # 139 * 3
-        # 3
-        # 2
-        # 4
-        # 9 * 3
-        # 7
-
-        #THINGS TO ABSTRACT:
-        #hand -> maybe to hand quality / suite quality - meaning the number of tricks they can take
-        #current_trick -> cards player and (strength of cards played - or number of cards that you can win will)
-        #points -> todo - possible arrangements of points
-
+        self.tricks_needed = np.zeros(self.num_players) #
 
         self.reset_game()
 
@@ -106,15 +74,6 @@ class NinetyNineEnv(gym.Env):
             pass
         else:
             raise ValueError('Invalid phase')
-
-    def render(self, mode='human'):
-        pass
-
-    def calculate_reward(self):
-        pass
-
-    def check_winner(self):
-        pass
 
     def valid_actions(self):
         return [card for card in self.player_hands[self.current_player]]
