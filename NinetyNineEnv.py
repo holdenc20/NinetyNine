@@ -17,40 +17,23 @@ class NinetyNineEnv(gym.Env):
         #self.points = np.zeros(self.num_players) FOR LATER
 
         #Bidding states
-        self.player_hands = None #Observable - your hand 
+        self.cards = np.zeros(52) #each representing the player who owns the card - 0 for dead cards
         self.trump_suit = np.random.randint(4)
 
         #Game play states - includes all the bidding states
-        self.current_trick = np.zeros(self.num_players) #maybe 52 - 1,0 for shown cards
+        self.current_trick = np.zeros(self.num_players) #maybe 52 - 1,0 for shown cards - could also show this as another class in the 52 card deck
         self.current_player = np.random.randint(self.num_players) #Observable - the current player's turn - maybe we can get this from the current_trick
-        self.tricks_needed = np.zeros(self.num_players) #
+        self.tricks_needed = np.zeros(self.num_players) #bid - num taken
 
         self.reset_game()
-
-
-    def reset(self):
-        self.reset_game()
-
-        observation = {
-            'hand': self.player_hands[0], # change to current player
-            'current_trick': self.current_trick,
-            'points': self.points,
-            'current_player': self.current_player,
-            'bidding_phase': self.bidding_phase,
-            'trump_suit': self.trump_suit,
-            'tricks_taken': self.tricks_taken,
-            'current_bid': self.current_bids[0] #change to curernt player
-        }
-
-        return observation
 
 
     def reset_game(self):
         self.reset_hand()
 
-        self.points = np.zeros(self.num_players)
+        #self.points = np.zeros(self.num_players) for later
         self.current_player = np.random.randint(self.num_players)
-        self.trump_suit = 0 #Initial trump suit is diamonds
+        self.trump_suit = np.random.randint(4) #Initial trump suit is diamonds - normally 0
 
     def reset_hand(self):
         #Randomly select 13 cards from a full deck no replacement
@@ -59,10 +42,8 @@ class NinetyNineEnv(gym.Env):
         self.current_trick = np.zeros(self.num_players, dtype=int)
         self.current_player = np.random.randint(self.num_players)
         self.bidding_phase = 1
-        self.trump_suit = self.contracts_met #Next round trump suit is the number of players who met contract the last round
-        self.tricks_taken = np.zeros(self.num_players, dtype=int)
-        self.tricks_remaining = 13
-        self.current_bids = np.zeros(self.num_players, dtype=int)
+        self.trump_suit = np.random.randint(self.num_players)#self.contracts_met #Next round trump suit is the number of players who met contract the last round
+        self.tricks_needed = np.zeros(self.num_players)
 
 
     def step(self, action):
