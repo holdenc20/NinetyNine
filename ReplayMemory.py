@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from collections import namedtuple
+import random
 
 
 Batch = namedtuple(
@@ -54,13 +55,12 @@ class ReplayMemory:
 
     def populate(self, env, num_steps):
         """Populate this replay memory with `num_steps` from the random policy."""
-        state, _ = env.reset()
-
+        state = env.reset_game()
         for _ in range(num_steps):
-            action = env.action_space.sample()
-            next_state, reward, done, truncated, _ = env.step(action)
+            action = random.choice(env.possible_actions())
+            next_state, reward, done, _ = env.step(action)
             self.add(state, action, reward, next_state, done)
-            if done or truncated:
-                state, _ = env.reset()
+            if done:
+                state = env.reset_game()
             else:
                 state = next_state

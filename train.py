@@ -1,13 +1,13 @@
 import torch
 import torch.nn.functional as F
-from tqdm import tqdm
+import tqdm
 import gymnasium as gym
 import random
 import numpy as np
 import copy
 
-import DQN
-import ReplayMemory
+from DQN import DQN
+from ReplayMemory import ReplayMemory
 
 def train_dqn_batch(optimizer, batch, dqn_model, dqn_target, gamma) -> float:
     """Perform a single batch-update step on the given DQN model."""
@@ -30,7 +30,7 @@ def train_dqn_batch(optimizer, batch, dqn_model, dqn_target, gamma) -> float:
     return loss.item()
 
 
-def train_dqn(
+def train_playing_dqn(
     env,
     num_steps,
     *,
@@ -41,11 +41,13 @@ def train_dqn(
     exploration,
     gamma,
 ):
-    state_size = env.observation_space.shape[0]
 
-    dqn_model = DQN(state_size, env.action_space.n)
+    state = env.reset_game()
+    state_size = len(state)
+    #state_size = env.observation_space.shape[0]
+
+    dqn_model = DQN(state_size, 52, num_layers=5, hidden_dim=128)
     dqn_target = DQN.custom_load(dqn_model.custom_dump())
-
     optimizer = torch.optim.Adam(dqn_model.parameters())
 
     memory = ReplayMemory(replay_size, state_size)
@@ -62,12 +64,10 @@ def train_dqn(
     i_episode = 0  # index of the current episode
     t_episode = 0  # time-step inside current episode
 
-    state, info = env.reset()
     G=0
 
     pbar = tqdm.trange(num_steps)
     for t_total in pbar:
-
         # Save model
         if t_total in t_saves:
             model_name = f'{100 * t_total / num_steps:04.1f}'.replace('.', '_')
@@ -75,12 +75,11 @@ def train_dqn(
 
         eps = exploration.value(t_total)
         if random.random() > eps:
-            action = dqn_model(torch.tensor(state)).argmax().item()
+            action = dqn_model(torch.tensor(state, dtype=torch.float32)).argmax().item()
         else:
-            action = env.action_space.sample()
+            action = random.choice(env.possible_actions())
 
-
-        next_state, reward, done, _, _ = env.step(action)
+        next_state, reward, done, _ = env.step(action)
 
         memory.add(state, action, reward, next_state, done)
 
@@ -99,7 +98,7 @@ def train_dqn(
         if done:
             returns.append(G)
             lengths.append(t_episode)
-            state, info = env.reset()
+            state = env.reset_game()
             pbar.set_description(
                 f'Episode: {i_episode} | Steps: {t_episode + 1} | Return: {G:5.2f} | Epsilon: {eps:4.2f}'
             )
