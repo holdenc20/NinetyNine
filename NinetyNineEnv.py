@@ -149,7 +149,7 @@ class NinetyNineEnv(gym.Env):
         done = False
         if self.bidding_phase == 0 and len(self.possible_actions(0)) == 0 and len(self.possible_actions(1)) == 0 and len(self.possible_actions(2)) == 0:
             scores = self.score_hand()
-            reward = scores[self.current_player]
+            reward = scores[0] - scores[1] - scores[2]
             done = True
 
         #UPDATING GAME STATE

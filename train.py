@@ -46,7 +46,7 @@ def train_playing_dqn(
     state_size = len(state)
     #state_size = env.observation_space.shape[0]
 
-    dqn_model = DQN(state_size, 52, num_layers=5, hidden_dim=128)
+    dqn_model = DQN(state_size, 52, num_layers=3, hidden_dim=128)
     dqn_target = DQN.custom_load(dqn_model.custom_dump())
     optimizer = torch.optim.Adam(dqn_model.parameters())
 
@@ -54,6 +54,7 @@ def train_playing_dqn(
     memory.populate(env, replay_prepopulate_steps)
 
     rewards = []
+    testingReturns = []
     returns = []
     lengths = []
     losses = []
@@ -66,22 +67,52 @@ def train_playing_dqn(
 
     G=0
 
+    old_dqn_model = DQN.custom_load(dqn_model.custom_dump())
+
     pbar = tqdm.trange(num_steps)
     for t_total in pbar:
+        current_dqn_model = dqn_model
+        if i_episode % 10 == 0:
+            testingReturns.append(test(env, current_dqn_model, old_dqn_model))
+            state = env.reset_game()
+
+            old_dqn_model = DQN.custom_load(dqn_model.custom_dump())
+
         # Save model
         if t_total in t_saves:
             model_name = f'{100 * t_total / num_steps:04.1f}'.replace('.', '_')
             saved_models[model_name] = copy.deepcopy(dqn_model)
 
         eps = exploration.value(t_total)
-        if random.random() > eps:
-            action = dqn_model(torch.tensor(state, dtype=torch.float32)).argmax().item()
+
+        if env.current_player == 0:
+            if random.random() > eps:
+                q_values = current_dqn_model(torch.tensor(state, dtype=torch.float32))
+                possible_actions = env.possible_actions()
+                num_actions = q_values.size(0)
+                mask = torch.full((num_actions,), float('-inf'))
+                mask[possible_actions] = 0
+
+                masked_q_values = q_values + mask
+
+                action = torch.argmax(masked_q_values).item()
+            else:
+                action = random.choice(env.possible_actions())
         else:
-            action = random.choice(env.possible_actions())
+            q_values = old_dqn_model(torch.tensor(state, dtype=torch.float32))
+            possible_actions = env.possible_actions()
+            num_actions = q_values.size(0)
+            mask = torch.full((num_actions,), float('-inf'))
+            mask[possible_actions] = 0
+
+            masked_q_values = q_values + mask
+
+            action = torch.argmax(masked_q_values).item()
 
         next_state, reward, done, _ = env.step(action)
 
-        memory.add(state, action, reward, next_state, done)
+        if env.current_player == 0:
+            memory.add(state, action, reward, next_state, done)
 
         state = next_state
         G += reward
@@ -115,4 +146,35 @@ def train_playing_dqn(
         np.array(returns),
         np.array(lengths),
         np.array(losses),
+        np.array(testingReturns)
     )
+
+def test(env, current_dqn_model, old_dqn_model):
+    total = 0
+    for i in range(10):
+        state = env.reset_game()
+        done = False
+        total_reward = 0
+        while not done:
+            q_values = (
+                current_dqn_model(torch.tensor(state, dtype=torch.float32))
+                if env.current_player == 0
+                else old_dqn_model(torch.tensor(state, dtype=torch.float32))
+            )
+
+            possible_actions = env.possible_actions()
+            if len(possible_actions) == 0:
+                break
+            num_actions = q_values.size(0)
+            mask = torch.full((num_actions,), float('-inf'))
+            mask[possible_actions] = 0
+
+            masked_q_values = q_values + mask
+            action = torch.argmax(masked_q_values).item()
+
+            state, reward, done, _ = env.step(action)
+            total_reward += reward
+
+        total += total_reward
+
+    return total / 10
