@@ -8,14 +8,14 @@ import numpy as np
 env = NinetyNineEnv()
 gamma = 0.99
 
-num_steps = 10000
+num_steps = 5000
 num_saves = 20
 
 replay_size = 200_000
 replay_prepopulate_steps = 50_000
 
 batch_size = 64
-exploration = ExponentialSchedule(1.0, 0.05, 10000)
+exploration = ExponentialSchedule(1.0, 0.05, 5000)
 
 dqn_models, returns, lengths, losses, testing_returns = train_playing_dqn(
     env,
@@ -32,7 +32,7 @@ dqn_models, returns, lengths, losses, testing_returns = train_playing_dqn(
 #assert all(isinstance(value, DQN) for value in dqn_models.values())
 
 checkpoint = {key: dqn.custom_dump() for key, dqn in dqn_models.items()}
-torch.save(checkpoint, f'model_{3}.pth')
+torch.save(checkpoint, f'model_testLargerNET.pth')
 #checkpoint = torch.load(f'checkpoint_{env.spec.id}.pt')
 
 import matplotlib.pyplot as plt
@@ -50,12 +50,15 @@ linspace_losses = np.linspace(0, len(losses)-1, len(losses), endpoint=True)
 plt.plot(linspace_losses, losses)
 plt.savefig('losses.png')
 """
+
+np.save('testing_returns2.npy', testing_returns)
+
 linspace_testing_returns = np.linspace(0, len(testing_returns)-1, len(testing_returns), endpoint=True)
 
-window_size = 1000
+window_size = 10
 averaged_testing_returns = np.mean(testing_returns[:len(testing_returns) - len(testing_returns) % window_size].reshape(-1, window_size), axis=1)
 
 linspace_averaged = np.linspace(0, len(averaged_testing_returns)-1, len(averaged_testing_returns), endpoint=True)
 
 plt.plot(linspace_averaged, averaged_testing_returns)
-plt.savefig('testing_returns_averaged.png')
+plt.savefig('testing_returns_averaged2.png')

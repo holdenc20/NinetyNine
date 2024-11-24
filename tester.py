@@ -44,15 +44,105 @@ class NinetyNineGUI:
         self.done = False
         self.total_reward = 0
 
-        self.root.geometry("1200x800")
+        # Initialize UI elements
+        self.root.geometry("1200x800")  # Set window size to fit the content
         self.root.title("NinetyNine Game")
 
+        # Frame for the main content area
+        self.main_frame = tk.Frame(root)
+        self.main_frame.pack(padx=20, pady=20, expand=True, fill=tk.BOTH)
+
+        # Label for game state info
+        self.info_label = tk.Label(self.main_frame, text="Game State", font=("Helvetica", 18, "bold"))
+        self.info_label.grid(row=0, column=0, columnspan=3, pady=10)
+
+        self.status_label = tk.Label(self.main_frame, text="Game Starting...", font=("Helvetica", 16))
+        self.status_label.grid(row=1, column=0, columnspan=3, pady=10)
+
+        self.bids_label = tk.Label(self.main_frame, text="Bids: ", font=("Helvetica", 14))
+        self.bids_label.grid(row=2, column=0, columnspan=3, pady=10)
+
+        self.played_cards_label = tk.Label(self.main_frame, text="Played Cards: ", font=("Helvetica", 14))
+        self.played_cards_label.grid(row=3, column=0, columnspan=3, pady=10)
+
+        # Create a frame for displaying players' hands
+        self.players_frame = tk.Frame(self.main_frame)
+        self.players_frame.grid(row=4, column=0, columnspan=3, pady=20, sticky="ew")
+
+        # Create a frame for displaying the current trick (cards in the middle)
+        self.trick_frame = tk.Frame(self.main_frame)
+        self.trick_frame.grid(row=5, column=0, columnspan=3, pady=10, sticky="ew")
+
+        # Create a frame for displaying the tricks needed
+        self.tricks_needed_frame = tk.Frame(self.main_frame)
+        self.tricks_needed_frame.grid(row=6, column=0, columnspan=3, pady=10, sticky="ew")
+
+        # Initialize a label to show the current state of the game
         self.update_gui()
 
+        # Start the auto-play process
         self.play_auto()
 
     def update_gui(self):
-        pass
+        """Update the game state display with card information (suits and ranks)."""
+        # Get current hand and other info from the environment
+        hand = self.env.get_hand()
+        self.status_label.config(text=f"Player {self.env.current_player + 1}'s Turn")
+
+        # Clear previous display elements
+        for widget in self.players_frame.winfo_children():
+            widget.destroy()
+
+        for widget in self.trick_frame.winfo_children():
+            widget.destroy()
+
+        for widget in self.tricks_needed_frame.winfo_children():
+            widget.destroy()
+
+        # Display each player's hand with rank and suit
+        for i in range(self.env.num_players):
+            player_hand = self.env.player_hands[i]
+            hand_str = " ".join([f"{Ranks[card % 13]}{Suits[card // 13]}" for card in np.where(player_hand == 1)[0]])
+            player_label = tk.Label(self.players_frame, text=f"Player {i + 1}'s Hand: {hand_str}", font=("Helvetica", 14))
+            player_label.pack(pady=5)
+
+        # Display the trump suit
+        trump_label = tk.Label(self.players_frame, text=f"Trump Suit: {Suits[self.env.trump_suit]}", font=("Helvetica", 14))
+        trump_label.pack(pady=10)
+
+        # Display current bids for all players
+        bids_str = " ".join([f"Player {i+1}: {bid}" for i, bid in enumerate(self.env.player_bids)])
+        self.bids_label.config(text=f"Bids: {bids_str}")
+
+        # Display the cards that have been played in the current trick (cards in the middle)
+        played_cards_str = ""
+
+        trick = self.env.current_trick
+
+        if sum(self.env.current_trick) == -3:
+            trick = self.env.last_trick
+        for i, card in enumerate(trick):
+            if card != -1:
+                played_cards_str += f"Player {i+1}: {Ranks[card % 13]}{Suits[card // 13]}  "
+            else:
+                played_cards_str += f"Player {i+1}: None  "
+
+        # Ensure exactly 3 cards are displayed
+        while len(self.env.current_trick) < 3:
+            played_cards_str += f"Player {len(self.env.current_trick)+1}: None  "
+            self.env.current_trick.append(-1)  # Append dummy value for missing cards
+        
+        self.played_cards_label.config(text=f"Played Cards: {played_cards_str.strip()}")
+
+        # Display the tricks needed for each player
+        tricks_needed_str = " ".join([f"Player {i+1}: {self.env.tricks_needed[i]}" for i in range(self.env.num_players)])
+        tricks_needed_label = tk.Label(self.tricks_needed_frame, text=f"Tricks Needed: {tricks_needed_str}", font=("Helvetica", 14))
+        tricks_needed_label.pack(pady=5)
+
+        if self.done:
+            self.status_label.config(text=f"Game Over! Final Reward: {self.total_reward}")
+            self.bids_label.config(text="")
+            self.played_cards_label.config(text="")
 
     def play_auto(self):
         """Automatically play the game using the model."""

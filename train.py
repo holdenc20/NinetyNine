@@ -46,7 +46,7 @@ def train_playing_dqn(
     state_size = len(state)
     #state_size = env.observation_space.shape[0]
 
-    dqn_model = DQN(state_size, 52, num_layers=3, hidden_dim=128)
+    dqn_model = DQN(state_size, 52, num_layers=4, hidden_dim=256)
     dqn_target = DQN.custom_load(dqn_model.custom_dump())
     optimizer = torch.optim.Adam(dqn_model.parameters())
 
@@ -72,10 +72,11 @@ def train_playing_dqn(
     pbar = tqdm.trange(num_steps)
     for t_total in pbar:
         current_dqn_model = dqn_model
-        if i_episode % 10 == 0:
+        if i_episode % 500 == 0:
             testingReturns.append(test(env, current_dqn_model, old_dqn_model))
             state = env.reset_game()
 
+        if i_episode % 10000 == 0:
             old_dqn_model = DQN.custom_load(dqn_model.custom_dump())
 
         # Save model
@@ -151,7 +152,7 @@ def train_playing_dqn(
 
 def test(env, current_dqn_model, old_dqn_model):
     total = 0
-    for i in range(10):
+    for i in range(100):
         state = env.reset_game()
         done = False
         total_reward = 0
