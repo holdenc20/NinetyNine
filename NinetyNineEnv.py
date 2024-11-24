@@ -23,7 +23,10 @@ class NinetyNineEnv(gym.Env):
 
         # Gameplay state
         self.current_trick = -1 * np.ones(self.num_players, dtype=int)
+        self.lead_suit = -1
         self.current_player = np.random.randint(self.num_players)  # 0, 1, 2
+
+        self.last_trick = -1 * np.ones(self.num_players, dtype=int)
 
 
         self.player_bids = np.zeros(self.num_players, dtype=int) #bid
@@ -93,9 +96,14 @@ class NinetyNineEnv(gym.Env):
         Returns the observation for the current player during the playing phase.
         """
         hand = self.get_hand()
-        current_trick = self.current_trick
+        current_trick = self.current_trick # make the current player the last player in the trick
+
+        current_trick = np.roll(self.current_trick, -self.current_player)
+
+
         trump = [self.trump_suit]
         current_bid_count = [self.tricks_needed[self.current_player]]
+
 
         observation = np.concatenate((hand, current_trick, trump, current_bid_count))
         return observation
@@ -130,6 +138,9 @@ class NinetyNineEnv(gym.Env):
             self.player_hands[self.current_player][card] = 0
         elif self.bidding_phase == 0:
             #need to play a card
+            if self.current_trick[0] == -1 and self.current_trick[1] == -1 and self.current_trick[2] == -1:
+                self.lead_suit = card // 13
+
             self.current_trick[self.current_player] = card
             for i in range(self.num_players):
                 self.player_hands[i][card] = 0
@@ -138,6 +149,7 @@ class NinetyNineEnv(gym.Env):
                 trickover = True
                 winner = self.best_card(self.current_trick, self.trump_suit, (self.current_player + 1) % self.num_players)
                 self.tricks_needed[winner] -= 1
+                self.last_trick = self.current_trick
                 self.current_trick = -1 * np.ones(self.num_players, dtype=int)
 
         #CHECKING IF BIDDING ROUND IS OVER
@@ -155,6 +167,7 @@ class NinetyNineEnv(gym.Env):
         #UPDATING GAME STATE
         if trickover:
             self.current_player = winner
+            self.lead_suit = -1
         else:
             self.current_player = (self.current_player + 1) % self.num_players
         next_state = self.get_state()
@@ -199,12 +212,28 @@ class NinetyNineEnv(gym.Env):
 
     #index of all possible actions
     def possible_actions(self, player = None):
-        if player is not None:
+        #this should only include following lead suit if possible
+        if player is None:
+            player = self.current_player
+
+        if self.bidding_phase == 1:
             return np.where(self.player_hands[player] == 1)[0]
-        return np.where(self.player_hands[self.current_player] == 1)[0]
+        elif self.bidding_phase == 0:
+            if self.lead_suit == -1:
+                return np.where(self.player_hands[player] == 1)[0]
+            else:
+                lead_suit_cards = []
+                for i, card in enumerate(self.player_hands[player]):
+                    if card == 1 and (i // 13 == self.lead_suit):
+                        lead_suit_cards.append(i)
+                if len(lead_suit_cards) > 0:
+                    return lead_suit_cards
+                else:
+                    return np.where(self.player_hands[player] == 1)[0]
 
     #TODO
     def score_hand(self):
+
         self.contracts_met = [0, 0, 0]
         for i in range(self.num_players):
             if self.tricks_needed[i] == 0:
@@ -212,16 +241,14 @@ class NinetyNineEnv(gym.Env):
                 self.contracts_met[i] = 1
 
         for i in range(self.num_players):
-            if sum(self.contracts_met) == 1:
+            if sum(self.contracts_met) == 1 and self.contracts_met[i] == 1:
                 self.points[i] += 30 + self.player_bids[i]
-            elif sum(self.contracts_met) == 2:
+            elif sum(self.contracts_met) == 2 and self.contracts_met[i] == 1:
                 self.points[i] += 20 + self.player_bids[i]
-            elif sum(self.contracts_met) == 3:
+            elif sum(self.contracts_met) == 3 and self.contracts_met[i] == 1:
                 self.points[i] += 10 + self.player_bids[i]
             else:
-                self.points[i] += self.player_bids[i]
-
-        #print("Points", self.points)
+                self.points[i] += (self.player_bids[i] - self.tricks_needed[i])
 
         return self.points
 

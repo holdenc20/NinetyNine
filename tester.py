@@ -13,7 +13,7 @@ state_size = len(state)
 
 # Load the checkpoint
 try:
-    checkpoint = torch.load(f'model_{3}.pth', map_location=torch.device('cpu'))
+    checkpoint = torch.load(f'model_finalish.pth', map_location=torch.device('cpu'))
 except FileNotFoundError:
     print("Checkpoint file not found. Please check the file path.")
     exit(1)
@@ -33,7 +33,7 @@ for key, state in checkpoint.items():
 print("Loaded models:", dqn_models_loaded.keys())
 
 
-Suits = ["\u2663", "\u2665", "\u2666", "\u2660"]  # Clubs, Hearts, Diamonds, Spades
+Suits = ["\u2666", "\u2660", "\u2665", "\u2663"]  # Diamond, Spade, Heart, Club
 Ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']  # Rank names
 class NinetyNineGUI:
     def __init__(self, root, env, model):
