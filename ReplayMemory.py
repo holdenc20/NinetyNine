@@ -27,6 +27,8 @@ class ReplayMemory:
 
     def add(self, state, action, reward, next_state, done):
         """Add a transition to the buffer."""
+        if len(state) != len(next_state):
+            return
         self.states[self.idx] = torch.tensor(state, dtype=torch.float32)
         self.actions[self.idx] = torch.tensor(action, dtype=torch.long).unsqueeze(0)
         self.rewards[self.idx] = torch.tensor(reward, dtype=torch.float32)
@@ -53,13 +55,19 @@ class ReplayMemory:
 
         return batch
 
-    def populate(self, env, num_steps):
+    @staticmethod
+    def populate(env, num_steps, memory_bid, memory_play):
         """Populate this replay memory with `num_steps` from the random policy."""
         state = env.reset_game()
         for _ in range(num_steps):
+            phase = env.bidding_phase
             action = random.choice(env.possible_actions())
             next_state, reward, done, _ = env.step(action)
-            self.add(state, action, reward, next_state, done)
+            if phase == 1:
+                memory_bid.add(state, action, reward, next_state, done)
+            else:
+                memory_play.add(state, action, reward, next_state, done)
+
             if done:
                 state = env.reset_game()
             else:

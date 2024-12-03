@@ -65,12 +65,14 @@ class NinetyNineEnv(gym.Env):
 
         #REMOVE LATER
         #get to playing phase randomly
+        """
         for r in range(3):
             for p in range(3):
                 actions = self.possible_actions()
                 action = random.choice(actions)
                 self.step(action)
         #print("Playing phase started")
+        """
 
         return self.get_state()
 
