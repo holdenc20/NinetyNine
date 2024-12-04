@@ -233,9 +233,7 @@ class NinetyNineEnv(gym.Env):
                 else:
                     return np.where(self.player_hands[player] == 1)[0]
 
-    #TODO
     def score_hand(self):
-
         self.contracts_met = [0, 0, 0]
         for i in range(self.num_players):
             if self.tricks_needed[i] == 0:
@@ -265,7 +263,3 @@ for i in range(30):
     x = input("Card to play: ")
     print(env.step(int(x)))
 '''
-
-#THINGS TO ADD LATER
-# NEED TO FOLLOW SUIT 
-# POINTS SYSTEM

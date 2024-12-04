@@ -1,6 +1,5 @@
 import math
 
-
 class ExponentialSchedule:
     def __init__(self, value_from, value_to, num_steps):
         """

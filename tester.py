@@ -45,7 +45,7 @@ class NinetyNineGUI:
         self.total_reward = 0
 
         # Initialize UI elements
-        self.root.geometry("1200x800")  # Set window size to fit the content
+        self.root.geometry("1200x800")
         self.root.title("NinetyNine Game")
 
         # Frame for the main content area

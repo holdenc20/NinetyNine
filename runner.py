@@ -7,9 +7,9 @@ import numpy as np
 
 # Initialize environment and hyperparameters
 env = NinetyNineEnv()
-gamma = 0.95
+gamma = 0.99
 
-num_steps = 500000
+num_steps = 10000
 num_saves = 20
 
 replay_size = 50_000
