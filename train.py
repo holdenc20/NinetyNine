@@ -65,6 +65,7 @@ def train_playing_dqn(
     returns = []
     lengths = []
     losses = []
+    bid_losses = []
 
     i_episode = 0
     t_episode = 0
@@ -129,16 +130,17 @@ def train_playing_dqn(
         G += reward
         t_episode += 1
 
-        if memory_bid.size >= batch_size and prev_phase == 1:
+        if memory_bid.size >= batch_size:
             for _ in range(5):
                 batch = memory_bid.sample(batch_size)
                 loss = train_dqn_batch(optimizer_bid, batch, dqn_bid_model, dqn_bid_target, gamma)
-                losses.append(loss)
+                bid_losses.append(loss)
 
-        if memory.size >= batch_size and prev_phase == 0:
-            batch = memory.sample(batch_size)
-            loss = train_dqn_batch(optimizer_play, batch, dqn_model, dqn_target, gamma)
-            losses.append(loss)
+        if memory.size >= batch_size:
+            for _ in range(5):
+                batch = memory.sample(batch_size)
+                loss = train_dqn_batch(optimizer_play, batch, dqn_model, dqn_target, gamma)
+                losses.append(loss)
 
         tau = 0.01
         for target_param, param in zip(dqn_target.parameters(), dqn_model.parameters()):
@@ -163,6 +165,7 @@ def train_playing_dqn(
         np.array(returns),
         np.array(lengths),
         np.array(losses),
+        np.array(bid_losses),
         np.array(testingReturns)
     )
 
