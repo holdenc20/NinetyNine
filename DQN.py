@@ -19,11 +19,7 @@ class DQN(nn.Module):
             layers.append(nn.Linear(input_dim, hidden_dim))
             layers.append(nn.LayerNorm(hidden_dim))  # Layer normalization for stabilization
             layers.append(nn.ReLU())
-            if use_pooling:
-                layers.append(nn.MaxPool1d(kernel_size=pooling_kernel, stride=pooling_kernel))
-                input_dim = hidden_dim // pooling_kernel  # Update input size after pooling
-            else:
-                input_dim = hidden_dim
+            input_dim = hidden_dim
 
         layers.append(nn.Linear(input_dim, action_dim))
         layers.append(nn.Identity())
@@ -33,12 +29,8 @@ class DQN(nn.Module):
     def forward(self, states) -> torch.Tensor:
         """Q function mapping from states to action-values."""
         if self.use_pooling:
-            states = states.unsqueeze(-1)  # Add a channel dimension for pooling
+            states = states.unsqueeze(-1)
         x = self.model(states)
-        
-        # Flatten the output if pooling is used
-        if self.use_pooling:
-            x = x.view(x.size(0), -1)  # Flatten the tensor to shape (batch_size, -1)
 
         return x
 
